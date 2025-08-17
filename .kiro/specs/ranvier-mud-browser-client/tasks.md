@@ -24,7 +24,14 @@
   - Create unit tests for proxy message conversion and connection handling
   - _Requirements: 1.1, 1.2_
 
-- [ ] 3. Create browser-based terminal client
+- [x] 3. Create browser-based terminal client
+
+
+
+
+
+
+
   - Set up web client with xterm.js terminal emulation
   - Implement WebSocket connection to proxy service
   - Add ANSI color code processing and terminal rendering
@@ -32,7 +39,12 @@
   - Write unit tests for terminal rendering and WebSocket communication
   - _Requirements: 1.1, 1.3_
 
-- [ ] 4. Configure Ranvier MUD server with basic world
+- [x] 4. Configure Ranvier MUD server with basic world
+
+
+
+
+
   - Set up Ranvier server with NeDB database configuration
   - Create 6-12 interconnected rooms with descriptions and exits
   - Add basic items (weapons, consumables) with take/drop functionality

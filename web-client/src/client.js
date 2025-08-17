@@ -1,9 +1,13 @@
+/**
+ * Testable version of MudClient for unit testing
+ */
+
 class MudClient {
   constructor() {
     this.terminal = null;
     this.websocket = null;
-    this.wsUrl = `ws://${window.location.hostname}:8080`;
-    this.statusElement = document.getElementById('connection-status');
+    this.wsUrl = typeof window !== 'undefined' ? `ws://${window.location.hostname}:8080` : 'ws://localhost:8080';
+    this.statusElement = typeof document !== 'undefined' ? document.getElementById('connection-status') : null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
@@ -48,13 +52,19 @@ class MudClient {
       }
     });
 
-    const container = document.getElementById('terminal-container');
-    this.terminal.open(container);
+    if (typeof document !== 'undefined') {
+      const container = document.getElementById('terminal-container');
+      if (container) {
+        this.terminal.open(container);
+      }
+    }
     
     // Initialize fit addon for proper terminal sizing
-    this.fitAddon = new FitAddon.FitAddon();
-    this.terminal.loadAddon(this.fitAddon);
-    this.fitAddon.fit();
+    if (typeof FitAddon !== 'undefined') {
+      this.fitAddon = new FitAddon.FitAddon();
+      this.terminal.loadAddon(this.fitAddon);
+      this.fitAddon.fit();
+    }
     
     // Handle terminal input with command history and special keys
     this.terminal.onData((data) => {
@@ -62,9 +72,13 @@ class MudClient {
     });
 
     // Handle terminal resize
-    window.addEventListener('resize', () => {
-      this.fitAddon.fit();
-    });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', () => {
+        if (this.fitAddon) {
+          this.fitAddon.fit();
+        }
+      });
+    }
 
     this.terminal.writeln('zev-mud Browser Client v1.0');
     this.terminal.writeln('Connecting to server...');
@@ -218,13 +232,15 @@ class MudClient {
   }
 
   updateStatus(className, text) {
-    this.statusElement.className = className;
-    this.statusElement.textContent = text;
-    
-    // Update the parent status container class for indicator styling
-    const statusContainer = this.statusElement.closest('.status');
-    if (statusContainer) {
-      statusContainer.className = `status ${className}`;
+    if (this.statusElement) {
+      this.statusElement.className = className;
+      this.statusElement.textContent = text;
+      
+      // Update the parent status container class for indicator styling
+      const statusContainer = this.statusElement.closest('.status');
+      if (statusContainer) {
+        statusContainer.className = `status ${className}`;
+      }
     }
     
     // Update button states
@@ -232,15 +248,17 @@ class MudClient {
   }
 
   updateControlButtons() {
-    const reconnectBtn = document.getElementById('reconnect-btn');
-    const disconnectBtn = document.getElementById('disconnect-btn');
-    
-    if (reconnectBtn && disconnectBtn) {
-      const isConnected = this.isConnected();
-      const isConnecting = this.connectionState === 'connecting';
+    if (typeof document !== 'undefined') {
+      const reconnectBtn = document.getElementById('reconnect-btn');
+      const disconnectBtn = document.getElementById('disconnect-btn');
       
-      reconnectBtn.disabled = isConnected || isConnecting;
-      disconnectBtn.disabled = !isConnected && !isConnecting;
+      if (reconnectBtn && disconnectBtn) {
+        const isConnected = this.isConnected();
+        const isConnecting = this.connectionState === 'connecting';
+        
+        reconnectBtn.disabled = isConnected || isConnecting;
+        disconnectBtn.disabled = !isConnected && !isConnecting;
+      }
     }
   }
 
@@ -270,11 +288,7 @@ class MudClient {
   }
 }
 
-// Initialize client when page loads
-let mudClient;
-document.addEventListener('DOMContentLoaded', () => {
-  mudClient = new MudClient();
-  
-  // Make client available globally for debugging
-  window.mudClient = mudClient;
-});
+// Export for testing
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = MudClient;
+}

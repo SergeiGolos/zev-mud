@@ -1,0 +1,120 @@
+- id: room1
+  title: "Dungeon Entrance"
+  description: "You stand at the entrance to a dark, musty dungeon. Stone walls stretch up into shadows, and you can hear the distant sound of dripping water. A narrow corridor leads north deeper into the dungeon, while the exit south leads back to safety."
+  exits:
+    - direction: north
+      roomId: "basic-area:room2"
+    - direction: south
+      roomId: "basic-area:room8"
+  items:
+    - "basic-area:torch"
+  npcs: []
+
+- id: room2
+  title: "Narrow Corridor"
+  description: "This narrow stone corridor is dimly lit by flickering torches mounted on the walls. The air is stale and cold. You can continue north to what appears to be a larger chamber, go east into a side passage, or return south to the entrance."
+  exits:
+    - direction: north
+      roomId: "basic-area:room3"
+    - direction: east
+      roomId: "basic-area:room4"
+    - direction: south
+      roomId: "basic-area:room1"
+  items: []
+  npcs: []
+
+- id: room3
+  title: "Central Chamber"
+  description: "You enter a large circular chamber with a high vaulted ceiling. Ancient stone pillars support the structure, and mysterious runes are carved into the walls. Passages lead in all four cardinal directions, and a stone staircase leads up to a higher level."
+  exits:
+    - direction: north
+      roomId: "basic-area:room5"
+    - direction: east
+      roomId: "basic-area:room6"
+    - direction: south
+      roomId: "basic-area:room2"
+    - direction: west
+      roomId: "basic-area:room7"
+    - direction: up
+      roomId: "basic-area:room9"
+  items:
+    - "basic-area:ancient_key"
+  npcs:
+    - "basic-area:guardian_statue"
+
+- id: room4
+  title: "Storage Room"
+  description: "This small room appears to have been used for storage. Broken crates and barrels are scattered about, and cobwebs hang from the ceiling. A rusty sword lies forgotten in the corner. The only exit is west back to the corridor."
+  exits:
+    - direction: west
+      roomId: "basic-area:room2"
+  items:
+    - "basic-area:rusty_sword"
+    - "basic-area:health_potion"
+  npcs: []
+
+- id: room5
+  title: "Guard Post"
+  description: "This room once served as a guard post, with arrow slits in the walls and the remains of wooden furniture. A skeleton warrior stands motionless in the center, still clutching its weapon. The only exit is south."
+  exits:
+    - direction: south
+      roomId: "basic-area:room3"
+  items:
+    - "basic-area:iron_shield"
+  npcs:
+    - "basic-area:skeleton_warrior"
+
+- id: room6
+  title: "Library Ruins"
+  description: "The remains of what was once a grand library. Charred books and scrolls litter the floor, and empty shelves line the walls. A few intact tomes remain on a stone pedestal in the center. You can go west to return to the central chamber."
+  exits:
+    - direction: west
+      roomId: "basic-area:room3"
+  items:
+    - "basic-area:spell_scroll"
+    - "basic-area:ancient_tome"
+  npcs: []
+
+- id: room7
+  title: "Armory"
+  description: "This room served as an armory, with weapon racks lining the walls. Most are empty now, but a few pieces of equipment remain. The air smells of old metal and leather. The only exit is east back to the central chamber."
+  exits:
+    - direction: east
+      roomId: "basic-area:room3"
+  items:
+    - "basic-area:leather_armor"
+    - "basic-area:iron_sword"
+  npcs: []
+
+- id: room8
+  title: "Dungeon Exit"
+  description: "You stand just outside the dungeon entrance. Fresh air fills your lungs, and sunlight streams down from above. This is a safe place to rest and recover. The dungeon entrance is to the north."
+  exits:
+    - direction: north
+      roomId: "basic-area:room1"
+  items:
+    - "basic-area:bread"
+  npcs: []
+
+- id: room9
+  title: "Upper Chamber"
+  description: "This upper chamber overlooks the central chamber below. Ancient tapestries hang on the walls, and a treasure chest sits in the far corner. Stone stairs lead down to the central chamber."
+  exits:
+    - direction: down
+      roomId: "basic-area:room3"
+  items:
+    - "basic-area:treasure_chest"
+    - "basic-area:gold_coins"
+  npcs: []
+
+- id: room10
+  title: "Secret Passage"
+  description: "A hidden passage that connects different parts of the dungeon. The walls are rough-hewn stone, and the air is particularly stale here. This passage connects the library to the armory."
+  exits:
+    - direction: east
+      roomId: "basic-area:room6"
+    - direction: west
+      roomId: "basic-area:room7"
+  items:
+    - "basic-area:mysterious_gem"
+  npcs: []

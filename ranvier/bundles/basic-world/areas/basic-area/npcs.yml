@@ -1,0 +1,48 @@
+- id: guardian_statue
+  name: "a stone guardian statue"
+  description: "A large stone statue of an ancient guardian. Its eyes seem to follow you as you move, and you sense it might come to life if threatened."
+  level: 3
+  attributes:
+    health: 80
+    mana: 20
+    stamina: 60
+  stats:
+    strength: 15
+    constitution: 18
+    dexterity: 8
+    intelligence: 6
+    wisdom: 12
+    charisma: 4
+  behaviors:
+    - "guardian"
+  dialogue:
+    default: "The stone guardian remains silent, but its eyes track your movement."
+    aggressive: "The guardian's eyes begin to glow with an ancient power!"
+  hostile: false
+  respawn: 300000  # 5 minutes
+
+- id: skeleton_warrior
+  name: "a skeleton warrior"
+  description: "The animated remains of an ancient warrior. Bones held together by dark magic, it clutches a rusted weapon and moves with unnatural purpose."
+  level: 2
+  attributes:
+    health: 50
+    mana: 0
+    stamina: 40
+  stats:
+    strength: 12
+    constitution: 10
+    dexterity: 14
+    intelligence: 3
+    wisdom: 8
+    charisma: 1
+  behaviors:
+    - "aggressive"
+    - "undead"
+  dialogue:
+    default: "The skeleton warrior rattles its bones menacingly."
+    combat: "The skeleton warrior attacks with ancient fury!"
+  hostile: true
+  respawn: 180000  # 3 minutes
+  equipment:
+    weapon: "basic-area:rusty_sword"

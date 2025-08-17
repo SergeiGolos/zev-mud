@@ -1,0 +1,9 @@
+{
+  "name": "basic-world",
+  "title": "Basic World Bundle",
+  "description": "A basic world with rooms, items, and NPCs for zev-mud",
+  "version": "1.0.0",
+  "areas": [
+    "basic-area"
+  ]
+}

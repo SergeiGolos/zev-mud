@@ -1,0 +1,4 @@
+title: "Basic Dungeon Area"
+metadata:
+  description: "A small dungeon area for new players"
+  level_range: [1, 5]

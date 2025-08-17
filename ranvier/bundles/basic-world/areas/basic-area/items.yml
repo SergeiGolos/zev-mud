@@ -1,0 +1,118 @@
+- id: torch
+  name: "a flickering torch"
+  description: "A wooden torch with a flame that flickers and dances, providing light in the darkness."
+  type: LIGHT
+  metadata:
+    weight: 2
+    value: 5
+
+- id: ancient_key
+  name: "an ancient bronze key"
+  description: "An old bronze key with intricate engravings. It looks like it might unlock something important."
+  type: KEY
+  metadata:
+    weight: 1
+    value: 50
+
+- id: rusty_sword
+  name: "a rusty sword"
+  description: "An old iron sword covered in rust. Despite its condition, it could still be used as a weapon."
+  type: WEAPON
+  metadata:
+    weight: 8
+    value: 15
+    damage: 5
+    durability: 50
+
+- id: health_potion
+  name: "a health potion"
+  description: "A small glass vial containing a red liquid that glows faintly. It smells of herbs and magic."
+  type: POTION
+  metadata:
+    weight: 1
+    value: 25
+    healing: 30
+
+- id: iron_shield
+  name: "an iron shield"
+  description: "A sturdy iron shield with a few dents and scratches. It bears the emblem of an ancient guard unit."
+  type: ARMOR
+  metadata:
+    weight: 12
+    value: 40
+    defense: 8
+    slot: "shield"
+
+- id: spell_scroll
+  name: "a spell scroll"
+  description: "A parchment scroll inscribed with magical runes. The words seem to shimmer and move when you look at them."
+  type: SCROLL
+  metadata:
+    weight: 1
+    value: 75
+    spell: "magic_missile"
+
+- id: ancient_tome
+  name: "an ancient tome"
+  description: "A heavy leather-bound book filled with arcane knowledge. Its pages are yellowed with age but still readable."
+  type: BOOK
+  metadata:
+    weight: 5
+    value: 100
+
+- id: leather_armor
+  name: "leather armor"
+  description: "A set of well-crafted leather armor. It's worn but still provides decent protection."
+  type: ARMOR
+  metadata:
+    weight: 15
+    value: 60
+    defense: 12
+    slot: "chest"
+
+- id: iron_sword
+  name: "an iron sword"
+  description: "A well-balanced iron sword with a sharp edge. It's in much better condition than the rusty one."
+  type: WEAPON
+  metadata:
+    weight: 10
+    value: 80
+    damage: 12
+    durability: 100
+
+- id: bread
+  name: "a loaf of bread"
+  description: "A fresh loaf of bread that smells delicious. It would restore some energy if eaten."
+  type: FOOD
+  metadata:
+    weight: 2
+    value: 3
+    nutrition: 20
+
+- id: treasure_chest
+  name: "a treasure chest"
+  description: "An ornate wooden chest bound with iron. It's locked, but you might be able to open it with the right key."
+  type: CONTAINER
+  metadata:
+    weight: 50
+    value: 200
+    locked: true
+    key: "ancient_key"
+
+- id: gold_coins
+  name: "gold coins"
+  description: "A small pile of gleaming gold coins. They would be valuable to any merchant."
+  type: CURRENCY
+  metadata:
+    weight: 1
+    value: 100
+    amount: 50
+
+- id: mysterious_gem
+  name: "a mysterious gem"
+  description: "A strange crystalline gem that pulses with an inner light. Its purpose is unknown, but it radiates magical energy."
+  type: GEM
+  metadata:
+    weight: 1
+    value: 150
+    magical: true

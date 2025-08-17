@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "ranvier": "^3.0.0",
-    "nedb": "^1.8.0"
+    "nedb": "^1.8.0",
+    "js-yaml": "^4.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.0",

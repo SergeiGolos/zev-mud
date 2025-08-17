@@ -1,0 +1,19 @@
+{
+  "name": "zev-mud-ranvier",
+  "version": "1.0.0",
+  "description": "Ranvier MUD server for zev-mud",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "ranvier": "^3.0.0",
+    "nedb": "^1.8.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",
+    "jest": "^29.0.0"
+  }
+}

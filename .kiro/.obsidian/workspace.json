@@ -1,0 +1,181 @@
+{
+  "main": {
+    "id": "7361a1998cb71826",
+    "type": "split",
+    "children": [
+      {
+        "id": "78433b6e381e4733",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "77d234908af4a22a",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "steering/tech.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "tech"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "3c8333033e83a9ef",
+    "type": "split",
+    "children": [
+      {
+        "id": "33be64d0209639e8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "73c63a5912ca381e",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "b46c49ab9f0bb1cd",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "f115e675180590bd",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "8334409afbfd190b",
+    "type": "split",
+    "children": [
+      {
+        "id": "41bfad6f46c7af02",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "08961acfce61a3b8",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "steering/tech.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for tech"
+            }
+          },
+          {
+            "id": "b6f8534b8c6eed3c",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "steering/tech.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from tech"
+            }
+          },
+          {
+            "id": "681c7f967d99250c",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "62b99689df699433",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "steering/tech.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of tech"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "73c63a5912ca381e",
+  "lastOpenFiles": [
+    "specs/ranvier-mud-browser-client/tasks.md",
+    "steering/structure.md",
+    "steering/product.md",
+    "specs/ranvier-mud-browser-client/design.md",
+    "specs/ranvier-mud-browser-client/requirements.md",
+    "steering/tech.md",
+    "steering"
+  ]
+}

@@ -52,8 +52,15 @@
   - Write unit tests for room navigation and item interactions
   - _Requirements: 2.1, 3.1, 3.2, 4.1, 5.1_
 
-- [ ] 5. Implement character creation and persistence system
-- [ ] 5.1 Create character creation flow for new players
+- [x] 5. Implement character creation and persistence system
+
+
+
+
+
+- [x] 5.1 Create character creation flow for new players
+
+
   - Build character creation interface that prompts for character name
   - Implement character name validation and uniqueness checking
   - Create new character data structure with initial stats and starting location
@@ -61,7 +68,9 @@
   - Write unit tests for character creation validation and persistence
   - _Requirements: 2.1, 2.2, 2.3_
 
-- [ ] 5.2 Implement character authentication and loading
+- [x] 5.2 Implement character authentication and loading
+
+
   - Create character lookup system by name for returning players
   - Implement character data loading from database on connection
   - Add character restoration to previous location and state
@@ -69,8 +78,17 @@
   - Write unit tests for character authentication and data loading
   - _Requirements: 2.1, 2.4_
 
-- [ ] 6. Build movement and navigation system
-- [ ] 6.1 Implement room movement commands
+- [-] 6. Build movement and navigation system
+
+
+
+
+
+- [x] 6.1 Implement room movement commands
+
+
+
+
   - Create movement command handlers (north, south, east, west, up, down)
   - Add exit validation and blocked movement error handling
   - Implement player location updates in database

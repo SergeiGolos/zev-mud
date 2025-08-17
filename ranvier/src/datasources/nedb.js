@@ -4,10 +4,18 @@ const path = require('path');
 class NedbDataSource {
   constructor(config) {
     this.config = config;
-    this.db = new Datastore({
-      filename: path.resolve(config.path || './data/characters.db'),
+    
+    // Support in-memory database for testing
+    const dbConfig = {
       autoload: true
-    });
+    };
+    
+    if (config.path) {
+      dbConfig.filename = path.resolve(config.path);
+    }
+    // If no path is provided, NeDB creates an in-memory database
+    
+    this.db = new Datastore(dbConfig);
   }
 
   async save(type, id, data) {

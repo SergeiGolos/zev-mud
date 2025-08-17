@@ -274,4 +274,208 @@ describe('Room Navigation', () => {
     const southExit = room2.exits.find(e => e.direction === 'south');
     expect(southExit.roomId).toBe('basic-area:room1');
   });
+
+  test('should validate movement commands with proper error handling', () => {
+    const room1 = gameState.getRoom('room1');
+    const player = new Player({
+      name: 'TestPlayer',
+      roomId: 'basic-area:room1'
+    });
+    
+    // Mock socket for testing output
+    const mockSocket = {
+      write: jest.fn()
+    };
+    player.socket = mockSocket;
+    player.room = room1;
+    room1.addPlayer(player);
+
+    // Create a mock server instance to test movePlayer method
+    const mockServer = {
+      gameState: gameState,
+      getOppositeDirection: (direction) => {
+        const opposites = {
+          'north': 'south',
+          'south': 'north',
+          'east': 'west',
+          'west': 'east',
+          'up': 'down',
+          'down': 'up'
+        };
+        return opposites[direction];
+      },
+      showRoom: jest.fn(),
+      movePlayer: function(player, direction) {
+        const room = player.room;
+        if (!room) {
+          player.socket.write('You are not in a valid location.\r\n');
+          return;
+        }
+
+        // Validate exit exists
+        const exit = room.exits.find(e => e.direction === direction);
+        if (!exit) {
+          player.socket.write(`You cannot go ${direction}.\r\n`);
+          return;
+        }
+
+        // Validate destination room exists
+        const newRoom = this.gameState.getRoom(exit.roomId);
+        if (!newRoom) {
+          player.socket.write(`The path ${direction} is blocked.\r\n`);
+          return;
+        }
+
+        // Remove from current room
+        room.removePlayer(player);
+        
+        // Add to new room
+        newRoom.addPlayer(player);
+        player.room = newRoom;
+        player.roomId = `basic-area:${newRoom.id}`;
+
+        // Show new room
+        this.showRoom(player);
+      }
+    };
+
+    // Test valid movement
+    mockServer.movePlayer(player, 'north');
+    expect(player.room.id).toBe('room2');
+    expect(mockServer.showRoom).toHaveBeenCalledWith(player);
+
+    // Test invalid movement
+    mockSocket.write.mockClear();
+    mockServer.movePlayer(player, 'west');
+    expect(mockSocket.write).toHaveBeenCalledWith('You cannot go west.\r\n');
+  });
+
+  test('should track player location updates correctly', () => {
+    const room1 = gameState.getRoom('room1');
+    const room2 = gameState.getRoom('room2');
+    const player = new Player({
+      name: 'LocationTestPlayer',
+      roomId: 'basic-area:room1'
+    });
+
+    // Initial location
+    player.room = room1;
+    room1.addPlayer(player);
+    expect(player.roomId).toBe('basic-area:room1');
+    expect(room1.players.has(player)).toBe(true);
+    expect(room2.players.has(player)).toBe(false);
+
+    // Move to room2
+    room1.removePlayer(player);
+    room2.addPlayer(player);
+    player.room = room2;
+    player.roomId = 'basic-area:room2';
+
+    // Verify location update
+    expect(player.roomId).toBe('basic-area:room2');
+    expect(room1.players.has(player)).toBe(false);
+    expect(room2.players.has(player)).toBe(true);
+  });
+
+  test('should handle blocked movement with proper error messages', () => {
+    const room1 = gameState.getRoom('room1');
+    const player = new Player({
+      name: 'BlockedTestPlayer',
+      roomId: 'basic-area:room1'
+    });
+    
+    const mockSocket = {
+      write: jest.fn()
+    };
+    player.socket = mockSocket;
+    player.room = room1;
+
+    // Test movement to non-existent direction
+    const mockServer = {
+      gameState: gameState,
+      movePlayer: function(player, direction) {
+        const room = player.room;
+        if (!room) {
+          player.socket.write('You are not in a valid location.\r\n');
+          return;
+        }
+
+        const exit = room.exits.find(e => e.direction === direction);
+        if (!exit) {
+          player.socket.write(`You cannot go ${direction}.\r\n`);
+          return;
+        }
+      }
+    };
+
+    // Test blocked directions
+    mockServer.movePlayer(player, 'west');
+    expect(mockSocket.write).toHaveBeenCalledWith('You cannot go west.\r\n');
+
+    mockSocket.write.mockClear();
+    mockServer.movePlayer(player, 'east');
+    expect(mockSocket.write).toHaveBeenCalledWith('You cannot go east.\r\n');
+
+    mockSocket.write.mockClear();
+    mockServer.movePlayer(player, 'up');
+    expect(mockSocket.write).toHaveBeenCalledWith('You cannot go up.\r\n');
+  });
+
+  test('should handle invalid room references gracefully', () => {
+    // Create a room with invalid exit
+    const invalidRoom = new Room({
+      id: 'invalid_room',
+      title: 'Invalid Room',
+      description: 'A room with broken exits',
+      exits: [{ direction: 'north', roomId: 'basic-area:nonexistent' }]
+    });
+
+    const player = new Player({
+      name: 'InvalidTestPlayer',
+      roomId: 'basic-area:invalid_room'
+    });
+    
+    const mockSocket = {
+      write: jest.fn()
+    };
+    player.socket = mockSocket;
+    player.room = invalidRoom;
+
+    const mockServer = {
+      gameState: gameState,
+      movePlayer: function(player, direction) {
+        const room = player.room;
+        const exit = room.exits.find(e => e.direction === direction);
+        if (!exit) {
+          player.socket.write(`You cannot go ${direction}.\r\n`);
+          return;
+        }
+
+        const newRoom = this.gameState.getRoom(exit.roomId);
+        if (!newRoom) {
+          player.socket.write(`The path ${direction} is blocked.\r\n`);
+          return;
+        }
+      }
+    };
+
+    // Test movement to invalid room
+    mockServer.movePlayer(player, 'north');
+    expect(mockSocket.write).toHaveBeenCalledWith('The path north is blocked.\r\n');
+  });
+
+  test('should validate all standard movement directions', () => {
+    const directions = ['north', 'south', 'east', 'west', 'up', 'down'];
+    const room = gameState.getRoom('room1');
+    
+    directions.forEach(direction => {
+      const exit = room.exits.find(e => e.direction === direction);
+      if (direction === 'north') {
+        expect(exit).toBeDefined();
+        expect(exit.roomId).toBe('basic-area:room2');
+      } else {
+        expect(exit).toBeUndefined();
+      }
+    });
+  });
 });

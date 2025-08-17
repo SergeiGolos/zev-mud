@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "steering/tech.md",
+                "file": "specs/ranvier-mud-browser-client/tasks.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "tech"
+              "title": "tasks"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "steering/tech.md",
+                "file": "specs/ranvier-mud-browser-client/tasks.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks for tech"
+              "title": "Backlinks for tasks"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "steering/tech.md",
+                "file": "specs/ranvier-mud-browser-client/tasks.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Outgoing links from tech"
+              "title": "Outgoing links from tasks"
             }
           },
           {
@@ -142,13 +142,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "steering/tech.md",
+                "file": "specs/ranvier-mud-browser-client/tasks.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Outline of tech"
+              "title": "Outline of tasks"
             }
           }
         ]
@@ -168,14 +168,14 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "73c63a5912ca381e",
+  "active": "77d234908af4a22a",
   "lastOpenFiles": [
+    "specs/ranvier-mud-browser-client/design.md",
+    "steering/tech.md",
     "specs/ranvier-mud-browser-client/tasks.md",
     "steering/structure.md",
     "steering/product.md",
-    "specs/ranvier-mud-browser-client/design.md",
     "specs/ranvier-mud-browser-client/requirements.md",
-    "steering/tech.md",
     "steering"
   ]
 }

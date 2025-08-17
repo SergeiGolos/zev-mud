@@ -6,7 +6,12 @@
   "scripts": {
     "start": "node src/proxy.js",
     "dev": "nodemon src/proxy.js",
-    "test": "jest"
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "test:unit": "jest --testPathPattern=tests/proxy.test.js --runInBand",
+    "test:integration": "jest --testPathPattern=tests/integration.test.js --runInBand",
+    "test:telnet": "jest --testPathPattern=tests/telnet-iac.test.js --runInBand"
   },
   "dependencies": {
     "ws": "^8.14.0",
@@ -15,5 +20,19 @@
   "devDependencies": {
     "nodemon": "^3.0.0",
     "jest": "^29.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "testTimeout": 15000
   }
 }

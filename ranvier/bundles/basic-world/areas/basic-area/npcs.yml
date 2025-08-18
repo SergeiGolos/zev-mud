@@ -15,9 +15,50 @@
     charisma: 4
   behaviors:
     - "guardian"
+    - "dialogue"
   dialogue:
     default: "The stone guardian remains silent, but its eyes track your movement."
     aggressive: "The guardian's eyes begin to glow with an ancient power!"
+  metadata:
+    dialogueTree:
+      default:
+        message: "The ancient guardian's stone eyes focus on you. A deep, rumbling voice echoes in your mind: 'I am the keeper of this sacred place. What brings you here, mortal?'"
+        responses:
+          - text: "I'm just exploring this place."
+            nextNode: "exploring"
+          - text: "I seek the ancient treasures hidden here."
+            nextNode: "treasure_seeker"
+          - text: "I mean no harm, great guardian."
+            nextNode: "peaceful"
+      exploring:
+        message: "The guardian's expression softens slightly. 'Curiosity is not a sin, young one. But beware - this place holds dangers for the unprepared. The skeleton warriors that roam these halls show no mercy.'"
+        responses:
+          - text: "Thank you for the warning."
+            nextNode: "grateful"
+          - text: "I can handle myself in a fight."
+            nextNode: "confident"
+      treasure_seeker:
+        message: "The guardian's eyes flare with ancient power. 'Greed has been the downfall of many who entered this place. If you seek treasure, you must prove yourself worthy through trial and combat.'"
+        responses:
+          - text: "I understand. I'll prove my worth."
+            nextNode: "trial"
+          - text: "Perhaps I should reconsider..."
+            nextNode: "reconsider"
+      peaceful:
+        message: "The guardian nods approvingly. 'Your respectful manner is noted, traveler. I sense no malice in your heart. You may pass safely, but remember - I protect the ancient key. Should you attempt to take it without proving yourself, I will awaken to defend it.'"
+        responses:
+          - text: "I understand and respect your duty."
+            nextNode: "respectful_end"
+      grateful:
+        message: "The guardian's voice carries a hint of warmth. 'You are wise to heed warnings, young one. May your journey be safe.'"
+      confident:
+        message: "The guardian chuckles, a sound like grinding stone. 'Confidence is good, but overconfidence is deadly. Remember this wisdom.'"
+      trial:
+        message: "The guardian's voice grows stern. 'Then face the trials ahead. Defeat the guardians of this place, and perhaps you will earn the right to the ancient treasures.'"
+      reconsider:
+        message: "The guardian nods sagely. 'Wisdom often lies in knowing when not to act. There is no shame in choosing a safer path.'"
+      respectful_end:
+        message: "The guardian returns to its silent vigil, but you sense its approval of your respectful approach."
   hostile: false
   respawn: 300000  # 5 minutes
 
@@ -39,9 +80,61 @@
   behaviors:
     - "aggressive"
     - "undead"
+    - "dialogue"
   dialogue:
     default: "The skeleton warrior rattles its bones menacingly."
     combat: "The skeleton warrior attacks with ancient fury!"
+  metadata:
+    dialogueTree:
+      default:
+        message: "The skeleton warrior's jaw moves with a grinding sound, and a hollow voice whispers: 'Death... comes... for... all...'"
+        responses:
+          - text: "Who are you? What happened to you?"
+            nextNode: "identity"
+          - text: "I don't want to fight you."
+            nextNode: "peaceful"
+          - text: "Prepare to be destroyed, undead!"
+            nextNode: "hostile"
+      identity:
+        message: "The skeleton's empty eye sockets flicker with dim light. 'I... was... a guardian... long ago... Now... only... duty... remains... Protect... the... sacred... halls...'"
+        responses:
+          - text: "Your duty is admirable, even in death."
+            nextNode: "respect"
+          - text: "Your time is over. Rest in peace."
+            nextNode: "rest"
+      peaceful:
+        message: "The skeleton warrior tilts its head, bones creaking. 'Peace... is... for... the... living... I... know... only... eternal... watch...'"
+        responses:
+          - text: "Then I'll leave you to your watch."
+            nextNode: "leave"
+          - text: "Perhaps I can help you find peace."
+            nextNode: "help"
+      hostile:
+        message: "The skeleton warrior raises its weapon, bones rattling with fury. 'Then... you... shall... join... the... eternal... guard...'"
+        action: "initiate_combat"
+      respect:
+        message: "The skeleton warrior nods slowly. 'Few... understand... duty... beyond... death... You... may... pass... but... beware... others... are... not... so... understanding...'"
+      rest:
+        message: "The skeleton's voice grows sadder. 'Rest... is... a... dream... I... cannot... grasp... The... magic... binds... me... here...'"
+        responses:
+          - text: "I'm sorry for your suffering."
+            nextNode: "sympathy"
+      leave:
+        message: "The skeleton warrior returns to its patrol, muttering ancient words of duty and vigilance."
+      help:
+        message: "The skeleton warrior's voice carries a hint of hope. 'Help... is... beyond... mortal... power... But... your... kindness... is... noted...'"
+      sympathy:
+        message: "The skeleton warrior's posture softens slightly. 'Your... compassion... honors... the... living... Go... in... peace...'"
+    # AI Configuration
+    spawnRoom: "basic-area:room2"
+    originalHostile: true
+    patrolRoute:
+      - "basic-area:room2"
+      - "basic-area:room3"
+      - "basic-area:room4"
+    combatTactics: "aggressive"
+    aggroRange: 2
+    memoryDuration: 60000  # 1 minute memory
   hostile: true
   respawn: 180000  # 3 minutes
   equipment:

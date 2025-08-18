@@ -161,8 +161,18 @@
   - Write unit tests for death detection and respawn mechanics
   - _Requirements: 5.3, 5.4_
 
-- [ ] 9. Implement NPC interaction system
-- [ ] 9.1 Create NPC dialogue system
+- [x] 9. Implement NPC interaction system
+
+
+
+
+
+
+
+- [x] 9.1 Create NPC dialogue system
+
+
+
   - Build dialogue tree structure for NPC conversations
   - Implement 'talk' command to initiate NPC conversations
   - Add dialogue response handling and conversation flow
@@ -170,7 +180,9 @@
   - Write unit tests for dialogue initiation and response handling
   - _Requirements: 6.1, 6.2_
 
-- [ ] 9.2 Add NPC hostile behavior
+- [x] 9.2 Add NPC hostile behavior
+
+
   - Implement NPC aggression detection and combat initiation
   - Create NPC AI for combat decision making
   - Add NPC movement and patrol behaviors

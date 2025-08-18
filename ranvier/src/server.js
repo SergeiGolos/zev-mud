@@ -178,6 +178,12 @@ class NPC {
     this.hostile = def.hostile || false;
     this.dialogue = def.dialogue || {};
     this.behaviors = def.behaviors || [];
+    this.combatState = {
+      inCombat: false,
+      target: null,
+      initiative: 0,
+      lastAction: null
+    };
   }
 }
 
@@ -840,6 +846,17 @@ class TelnetServer {
           this.sayToRoom(player, args.slice(1).join(' '));
         } else {
           this.safeWrite(player.socket, 'Say what?\r\n');
+        }
+        break;
+        
+      case 'attack':
+      case 'att':
+      case 'kill':
+      case 'fight':
+        if (args.length > 1) {
+          this.attackTarget(player, args.slice(1).join(' '));
+        } else {
+          this.safeWrite(player.socket, 'Attack what?\r\n');
         }
         break;
         
@@ -1804,6 +1821,316 @@ class TelnetServer {
     };
   }
 
+  attackTarget(player, targetName) {
+    const room = player.room;
+    if (!room) {
+      return this.safeWrite(player.socket, 'You are not in a valid location.\r\n');
+    }
+
+    // Check if player is already in combat
+    if (player.combatState.inCombat) {
+      return this.safeWrite(player.socket, 'You are already in combat!\r\n');
+    }
+
+    // Find target NPC in room
+    let target = null;
+    if (room.npcs && room.npcs.size > 0) {
+      target = Array.from(room.npcs).find(npc => 
+        npc.name.toLowerCase().includes(targetName.toLowerCase()) ||
+        npc.id.toLowerCase().includes(targetName.toLowerCase())
+      );
+    }
+
+    if (!target) {
+      return this.safeWrite(player.socket, `You don't see '${targetName}' here to attack.\r\n`);
+    }
+
+    // Check if target is already dead
+    if (target.attributes.health <= 0) {
+      return this.safeWrite(player.socket, `${target.name} is already dead.\r\n`);
+    }
+
+    // Check if target is already in combat with someone else
+    if (target.combatState && target.combatState.inCombat && target.combatState.target !== player) {
+      return this.safeWrite(player.socket, `${target.name} is already fighting someone else.\r\n`);
+    }
+
+    // Initialize combat state for both combatants
+    this.initializeCombat(player, target);
+
+    // Announce combat initiation
+    this.safeWrite(player.socket, `You attack ${target.name}!\r\n`);
+    
+    // Announce to room
+    room.getBroadcastTargets().forEach(otherPlayer => {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${player.name} attacks ${target.name}!\r\n`);
+      }
+    });
+
+    // Start combat round
+    this.startCombatRound(player, target);
+  }
+
+  initializeCombat(player, target) {
+    // Set combat state for player
+    player.combatState = {
+      inCombat: true,
+      target: target,
+      initiative: this.calculateInitiative(player),
+      lastAction: new Date()
+    };
+
+    // Set combat state for target
+    target.combatState = {
+      inCombat: true,
+      target: player,
+      initiative: this.calculateInitiative(target),
+      lastAction: new Date()
+    };
+  }
+
+  calculateInitiative(combatant) {
+    // Base initiative on dexterity + random factor
+    const dexterity = combatant.stats?.dexterity || 10;
+    const randomFactor = Math.floor(Math.random() * 20) + 1; // 1-20
+    return dexterity + randomFactor;
+  }
+
+  startCombatRound(player, target) {
+    // Determine turn order based on initiative
+    const playerInitiative = player.combatState.initiative;
+    const targetInitiative = target.combatState.initiative;
+
+    if (playerInitiative >= targetInitiative) {
+      // Player goes first
+      this.performPlayerAttack(player, target);
+    } else {
+      // Target goes first
+      this.performNPCAttack(target, player);
+    }
+  }
+
+  performPlayerAttack(player, target) {
+    if (!player.combatState.inCombat || !target.combatState.inCombat) {
+      return;
+    }
+
+    // Calculate damage
+    const damage = this.calculateDamage(player, target);
+    
+    // Apply damage
+    const currentHealth = target.attributes.health;
+    const newHealth = Math.max(0, currentHealth - damage);
+    target.attributes.health = newHealth;
+
+    // Announce attack
+    this.safeWrite(player.socket, `You hit ${target.name} for ${damage} damage!\r\n`);
+    
+    // Announce to room
+    player.room.getBroadcastTargets().forEach(otherPlayer => {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${player.name} hits ${target.name} for ${damage} damage!\r\n`);
+      }
+    });
+
+    // Update last action
+    player.combatState.lastAction = new Date();
+
+    // Check if target is dead
+    if (newHealth <= 0) {
+      this.handleDeath(target, player);
+      return;
+    }
+
+    // Target's turn to attack
+    setTimeout(() => {
+      if (player.combatState.inCombat && target.combatState.inCombat) {
+        this.performNPCAttack(target, player);
+      }
+    }, 1500); // 1.5 second delay between attacks
+  }
+
+  performNPCAttack(npc, player) {
+    if (!npc.combatState.inCombat || !player.combatState.inCombat) {
+      return;
+    }
+
+    // Calculate damage
+    const damage = this.calculateDamage(npc, player);
+    
+    // Apply damage
+    const currentHealth = player.attributes.health;
+    const newHealth = Math.max(0, currentHealth - damage);
+    player.attributes.health = newHealth;
+
+    // Announce attack
+    this.safeWrite(player.socket, `${npc.name} hits you for ${damage} damage!\r\n`);
+    
+    // Announce to room
+    player.room.getBroadcastTargets().forEach(otherPlayer => {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${npc.name} hits ${player.name} for ${damage} damage!\r\n`);
+      }
+    });
+
+    // Update last action
+    npc.combatState.lastAction = new Date();
+
+    // Check if player is dead
+    if (newHealth <= 0) {
+      this.handleDeath(player, npc);
+      return;
+    }
+
+    // Player's turn to attack
+    setTimeout(() => {
+      if (player.combatState.inCombat && npc.combatState.inCombat) {
+        this.performPlayerAttack(player, npc);
+      }
+    }, 1500); // 1.5 second delay between attacks
+  }
+
+  calculateDamage(attacker, defender) {
+    // Base damage from strength
+    let baseDamage = attacker.stats?.strength || 10;
+    
+    // Add weapon damage if equipped
+    if (attacker.equipment && attacker.equipment.weapon) {
+      const weaponDamage = attacker.equipment.weapon.metadata?.damage || 0;
+      baseDamage += weaponDamage;
+    }
+    
+    // Add random variance (80-120% of base damage)
+    const variance = 0.8 + (Math.random() * 0.4);
+    let finalDamage = Math.floor(baseDamage * variance);
+    
+    // Apply defender's armor/defense
+    let defense = 0;
+    if (defender.equipment && defender.equipment.armor) {
+      defense = defender.equipment.armor.metadata?.defense || 0;
+    }
+    
+    // Constitution provides natural defense
+    const constitution = defender.stats?.constitution || 10;
+    defense += Math.floor(constitution / 4); // 1 defense per 4 constitution
+    
+    // Apply defense (minimum 1 damage)
+    finalDamage = Math.max(1, finalDamage - defense);
+    
+    return finalDamage;
+  }
+
+  handleDeath(deceased, killer) {
+    // End combat for both participants
+    this.endCombat(deceased, killer);
+
+    if (deceased.name && deceased.socket) {
+      // Player death
+      this.handlePlayerDeath(deceased, killer);
+    } else {
+      // NPC death
+      this.handleNPCDeath(deceased, killer);
+    }
+  }
+
+  handlePlayerDeath(player, killer) {
+    // Announce death
+    this.safeWrite(player.socket, 'You have been defeated!\r\n');
+    
+    player.room.getBroadcastTargets().forEach(otherPlayer => {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${player.name} has been defeated by ${killer.name}!\r\n`);
+      }
+    });
+
+    // Respawn player at safe location
+    const safeRoom = this.gameState.getRoom('room8');
+    
+    if (safeRoom) {
+      // Remove from current room
+      player.room.removePlayer(player);
+      
+      // Add to safe room
+      safeRoom.addPlayer(player);
+      player.room = safeRoom;
+      player.roomId = 'basic-area:room8';
+      
+      // Restore health to 50%
+      const maxHealth = player.attributes.maxHealth || 100;
+      player.attributes.health = Math.floor(maxHealth * 0.5);
+      
+      this.safeWrite(player.socket, 'You wake up in a safe place, battered but alive.\r\n');
+      
+      // Show the safe room
+      setTimeout(() => {
+        if (player.socket && !player.socket.destroyed) {
+          this.showRoom(player);
+        }
+      }, 2000);
+    }
+  }
+
+  handleNPCDeath(npc, killer) {
+    // Announce death
+    this.safeWrite(killer.socket, `You have defeated ${npc.name}!\r\n`);
+    
+    killer.room.getBroadcastTargets().forEach(otherPlayer => {
+      if (otherPlayer !== killer) {
+        this.safeWrite(otherPlayer.socket, `${killer.name} has defeated ${npc.name}!\r\n`);
+      }
+    });
+
+    // Award experience
+    const expGained = (npc.level || 1) * 10;
+    killer.stats.experience = (killer.stats.experience || 0) + expGained;
+    this.safeWrite(killer.socket, `You gain ${expGained} experience points!\r\n`);
+
+    // Remove NPC from room
+    killer.room.npcs.delete(npc);
+
+    // Schedule respawn
+    if (npc.def && npc.def.respawn) {
+      setTimeout(() => {
+        this.respawnNPC(npc, killer.room);
+      }, npc.def.respawn);
+    }
+  }
+
+  respawnNPC(originalNPC, room) {
+    // Create new instance of the NPC
+    const newNPC = new NPC(originalNPC.def);
+    
+    // Add back to room
+    room.npcs.add(newNPC);
+    
+    // Announce respawn to players in room
+    room.getBroadcastTargets().forEach(player => {
+      this.safeWrite(player.socket, `${newNPC.name} appears in the area.\r\n`);
+    });
+  }
+
+  endCombat(combatant1, combatant2) {
+    // Reset combat state for both combatants
+    if (combatant1.combatState) {
+      combatant1.combatState = {
+        inCombat: false,
+        target: null,
+        initiative: 0,
+        lastAction: null
+      };
+    }
+
+    if (combatant2.combatState) {
+      combatant2.combatState = {
+        inCombat: false,
+        target: null,
+        initiative: 0,
+        lastAction: null
+      };
+    }
+  }
+
   sayToRoom(player, message) {
     this.safeWrite(player.socket, `You say, "${message}"\r\n`);
     
@@ -1822,11 +2149,22 @@ class TelnetServer {
   }
 }
 
-// Start server
-const server = new TelnetServer(gameState);
-server.start();
+// Export classes for testing
+module.exports = {
+  GameState,
+  TelnetServer,
+  Player,
+  NPC,
+  Room,
+  Item
+};
 
-// Graceful shutdown
+// Only start server if this file is run directly
+if (require.main === module) {
+  // Start server
+  const server = new TelnetServer(gameState);
+  server.start();
+}
 process.on('SIGTERM', () => {
   console.log('Received SIGTERM, shutting down gracefully');
   server.stop();

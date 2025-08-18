@@ -136,8 +136,14 @@
   - Write unit tests for inventory display and item usage
   - _Requirements: 4.1, 4.3_
 
-- [ ] 8. Develop combat system
-- [ ] 8.1 Create basic combat mechanics
+- [x] 8. Develop combat system
+
+
+
+
+- [x] 8.1 Create basic combat mechanics
+
+
   - Implement 'attack' command to initiate combat with NPCs
   - Create turn-based combat system with initiative ordering
   - Add damage calculation using character and weapon stats
@@ -145,7 +151,9 @@
   - Write unit tests for combat initiation and damage calculations
   - _Requirements: 5.1, 5.2_
 
-- [ ] 8.2 Add death and respawn handling
+- [x] 8.2 Add death and respawn handling
+
+
   - Create death detection when health reaches zero
   - Implement player respawn at starting location with restored health
   - Add NPC respawn mechanics after death

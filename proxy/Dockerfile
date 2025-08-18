@@ -1,42 +1,58 @@
-# Use Node.js LTS version
-FROM node:18-alpine
+# Multi-stage build for WebSocket-Telnet proxy
+FROM node:18-alpine AS base
 
-# Set working directory
+# Install system dependencies
+RUN apk add --no-cache \
+    wget \
+    dumb-init \
+    && rm -rf /var/cache/apk/*
+
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Development stage
+FROM base AS development
 RUN npm install
+COPY . .
+RUN mkdir -p logs certs
+EXPOSE 8080 8443
+CMD ["npm", "run", "dev"]
 
-# Copy source code
-COPY src/ ./src/
-COPY config/ ./config/
+# Production dependencies stage
+FROM base AS deps
+RUN npm ci --only=production && npm cache clean --force
+
+# Production stage
+FROM base AS production
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
-    adduser -S proxy -u 1001
+    adduser -S proxy -u 1001 -G nodejs
 
-# Change ownership of the app directory
-RUN chown -R proxy:nodejs /app
+# Copy production dependencies
+COPY --from=deps --chown=proxy:nodejs /app/node_modules ./node_modules
+
+# Copy application code
+COPY --chown=proxy:nodejs src/ ./src/
+COPY --chown=proxy:nodejs config/ ./config/
+COPY --chown=proxy:nodejs package*.json ./
+
+# Create necessary directories with proper permissions
+RUN mkdir -p logs certs && \
+    chown -R proxy:nodejs logs certs
 
 # Switch to non-root user
 USER proxy
 
-# Expose WebSocket port
-EXPOSE 8080
+# Expose WebSocket ports (HTTP and HTTPS)
+EXPOSE 8080 8443
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "const http = require('http'); \
-    const options = { hostname: 'localhost', port: 8080, path: '/health', timeout: 2000 }; \
-    const req = http.request(options, (res) => { \
-      if (res.statusCode === 200) process.exit(0); \
-      else process.exit(1); \
-    }); \
-    req.on('error', () => process.exit(1)); \
-    req.end();"
+HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
-# Start the proxy
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["npm", "start"]

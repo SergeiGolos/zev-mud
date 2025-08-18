@@ -1,0 +1,60 @@
+version: '3.8'
+
+# Production override configuration
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+services:
+  ranvier:
+    build:
+      target: production
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  proxy:
+    build:
+      target: production
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
+      - SSL_ENABLED=true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  web-client:
+    build:
+      target: production
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
+      - SSL_ENABLED=true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  nginx:
+    environment:
+      - SSL_ENABLED=true
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s

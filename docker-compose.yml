@@ -5,39 +5,73 @@ services:
     build: 
       context: ./ranvier
       dockerfile: Dockerfile
+      target: production
     ports:
-      - "3000:3000"
+      - "${RANVIER_PORT:-3000}:3000"
     volumes:
       - ranvier_data:/app/data
+      - ranvier_areas:/app/areas
+      - ranvier_bundles:/app/bundles
+      - ranvier_logs:/app/logs
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - DB_TYPE=${DB_TYPE:-nedb}
+      - DB_HOST=${DB_HOST:-}
+      - DB_PORT=${DB_PORT:-}
+      - DB_NAME=${DB_NAME:-ranvier}
+      - DB_USER=${DB_USER:-}
+      - DB_PASS=${DB_PASS:-}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_PLAYERS=${MAX_PLAYERS:-50}
+      - SAVE_INTERVAL=${SAVE_INTERVAL:-30}
     networks:
       - mud-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "3000"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=ranvier"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
 
   proxy:
     build:
       context: ./proxy
       dockerfile: Dockerfile
+      target: production
     ports:
-      - "8080:8080"
+      - "${PROXY_PORT:-8080}:8080"
+      - "${PROXY_SSL_PORT:-8443}:8443"
     environment:
       - NODE_ENV=production
       - WS_PORT=8080
+      - WSS_PORT=8443
       - TELNET_HOST=ranvier
       - TELNET_PORT=3000
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/app/certs/cert.pem}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/certs/key.pem}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - MAX_CONNECTIONS=${MAX_CONNECTIONS:-100}
+      - CONNECTION_TIMEOUT=${CONNECTION_TIMEOUT:-300000}
+    volumes:
+      - proxy_logs:/app/logs
+      - ssl_certs:/app/certs:ro
     depends_on:
       ranvier:
         condition: service_healthy
@@ -46,25 +80,46 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=proxy"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.15'
 
   web-client:
     build:
       context: ./web-client
       dockerfile: Dockerfile
+      target: production
     ports:
-      - "3001:3001"
+      - "${WEB_PORT:-3001}:3001"
+      - "${WEB_SSL_PORT:-3443}:3443"
     environment:
       - NODE_ENV=production
       - PORT=3001
+      - SSL_PORT=3443
+      - PROXY_WS_URL=${PROXY_WS_URL:-ws://localhost:8080}
+      - PROXY_WSS_URL=${PROXY_WSS_URL:-wss://localhost:8443}
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+      - SSL_CERT_PATH=${SSL_CERT_PATH:-/app/certs/cert.pem}
+      - SSL_KEY_PATH=${SSL_KEY_PATH:-/app/certs/key.pem}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - web_logs:/app/logs
+      - ssl_certs:/app/certs:ro
     depends_on:
       proxy:
         condition: service_healthy
@@ -73,20 +128,130 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
-      interval: 30s
-      timeout: 10s
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=web-client"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.3'
+        reservations:
+          memory: 128M
+          cpus: '0.15'
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ssl_certs:/etc/nginx/certs:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - web-client
+      - proxy
+    networks:
+      - mud-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 15s
+      timeout: 5s
       retries: 3
       start_period: 10s
     logging:
       driver: "json-file"
       options:
+        max-size: "50m"
+        max-file: "5"
+        labels: "service=nginx"
+
+  monitoring:
+    image: prom/node-exporter:latest
+    ports:
+      - "${MONITORING_PORT:-9100}:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - mud-network
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
         max-size: "10m"
         max-file: "3"
+        labels: "service=monitoring"
 
 networks:
   mud-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
   ranvier_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}/ranvier
+  ranvier_areas:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}/areas
+  ranvier_bundles:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${DATA_PATH:-./data}/bundles
+  ranvier_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}/ranvier
+  proxy_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}/proxy
+  web_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}/web
+  nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOGS_PATH:-./logs}/nginx
+  ssl_certs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${CERTS_PATH:-./certs}

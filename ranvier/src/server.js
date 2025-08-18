@@ -807,6 +807,34 @@ class TelnetServer {
         }
         break;
         
+      case 'use':
+      case 'consume':
+        if (args.length > 1) {
+          this.useItem(player, args.slice(1).join(' '));
+        } else {
+          this.safeWrite(player.socket, 'Use what?\r\n');
+        }
+        break;
+        
+      case 'equip':
+      case 'wield':
+      case 'wear':
+        if (args.length > 1) {
+          this.equipItem(player, args.slice(1).join(' '));
+        } else {
+          this.safeWrite(player.socket, 'Equip what?\r\n');
+        }
+        break;
+        
+      case 'unequip':
+      case 'remove':
+        if (args.length > 1) {
+          this.unequipItem(player, args.slice(1).join(' '));
+        } else {
+          this.safeWrite(player.socket, 'Unequip what?\r\n');
+        }
+        break;
+        
       case 'say':
         if (args.length > 1) {
           this.sayToRoom(player, args.slice(1).join(' '));
@@ -1192,80 +1220,597 @@ class TelnetServer {
 
   showInventory(player) {
     if (!player.inventory || player.inventory.size === 0) {
-      player.socket.write('You are not carrying anything.\r\n');
+      this.safeWrite(player.socket, 'You are not carrying anything.\r\n');
       return;
     }
 
-    player.socket.write('You are carrying:\r\n');
-    for (const item of player.inventory) {
-      player.socket.write(`  ${item.name}\r\n`);
+    this.safeWrite(player.socket, 'You are carrying:\r\n');
+    
+    // Group items by type for better organization
+    const itemsByType = this.groupItemsByType(player.inventory);
+    
+    // Calculate total weight and capacity
+    const totalWeight = this.calculateInventoryWeight(player);
+    const weightLimit = 100;
+    const itemCount = player.inventory.size;
+    const itemLimit = 20;
+    
+    // Display items by category
+    Object.keys(itemsByType).forEach(type => {
+      if (itemsByType[type].length > 0) {
+        this.safeWrite(player.socket, `\r\n${type}:\r\n`);
+        itemsByType[type].forEach(item => {
+          const weight = item.metadata && item.metadata.weight ? ` (${item.metadata.weight} lbs)` : '';
+          const value = item.metadata && item.metadata.value ? ` [${item.metadata.value} gold]` : '';
+          this.safeWrite(player.socket, `  ${item.name}${weight}${value}\r\n`);
+        });
+      }
+    });
+    
+    // Show capacity information
+    this.safeWrite(player.socket, `\r\nCapacity: ${itemCount}/${itemLimit} items, ${totalWeight}/${weightLimit} lbs\r\n`);
+    
+    // Show equipped items
+    this.showEquippedItems(player);
+  }
+
+  groupItemsByType(inventory) {
+    const groups = {
+      'Weapons': [],
+      'Armor': [],
+      'Consumables': [],
+      'Books & Scrolls': [],
+      'Valuables': [],
+      'Miscellaneous': []
+    };
+    
+    for (const item of inventory) {
+      switch (item.type) {
+        case 'WEAPON':
+          groups['Weapons'].push(item);
+          break;
+        case 'ARMOR':
+          groups['Armor'].push(item);
+          break;
+        case 'POTION':
+        case 'FOOD':
+          groups['Consumables'].push(item);
+          break;
+        case 'BOOK':
+        case 'SCROLL':
+          groups['Books & Scrolls'].push(item);
+          break;
+        case 'CURRENCY':
+        case 'GEM':
+          groups['Valuables'].push(item);
+          break;
+        default:
+          groups['Miscellaneous'].push(item);
+      }
+    }
+    
+    return groups;
+  }
+
+  showEquippedItems(player) {
+    if (!player.equipment) {
+      return;
+    }
+    
+    const equipped = [];
+    if (player.equipment.weapon) {
+      equipped.push(`Weapon: ${player.equipment.weapon.name}`);
+    }
+    if (player.equipment.armor) {
+      equipped.push(`Armor: ${player.equipment.armor.name}`);
+    }
+    if (player.equipment.accessories && player.equipment.accessories.length > 0) {
+      player.equipment.accessories.forEach(accessory => {
+        equipped.push(`Accessory: ${accessory.name}`);
+      });
+    }
+    
+    if (equipped.length > 0) {
+      this.safeWrite(player.socket, '\r\nCurrently equipped:\r\n');
+      equipped.forEach(item => {
+        this.safeWrite(player.socket, `  ${item}\r\n`);
+      });
     }
   }
 
   takeItem(player, itemName) {
     const room = player.room;
-    if (!room || !room.items) return;
-
-    const item = Array.from(room.items).find(i => 
-      i.name.toLowerCase().includes(itemName.toLowerCase())
-    );
-
-    if (!item) {
-      player.socket.write(`There is no ${itemName} here.\r\n`);
+    if (!room) {
+      this.safeWrite(player.socket, 'You are not in a valid location.\r\n');
       return;
     }
 
+    // Find the item in the room
+    const item = this.findItemInRoom(room, itemName.toLowerCase());
+    if (!item) {
+      this.safeWrite(player.socket, `You don't see '${itemName}' here.\r\n`);
+      return;
+    }
+
+    // Check inventory capacity (default limit of 20 items)
+    const inventoryLimit = 20;
+    if (player.inventory && player.inventory.size >= inventoryLimit) {
+      this.safeWrite(player.socket, 'Your inventory is full. You cannot carry any more items.\r\n');
+      return;
+    }
+
+    // Check if item can be taken (some items might be fixed)
+    if (item.metadata && item.metadata.fixed) {
+      this.safeWrite(player.socket, `You cannot take ${item.name}.\r\n`);
+      return;
+    }
+
+    // Check weight limit (optional - default 100 lbs capacity)
+    const weightLimit = 100;
+    const currentWeight = this.calculateInventoryWeight(player);
+    const itemWeight = item.metadata ? (item.metadata.weight || 0) : 0;
+    
+    if (currentWeight + itemWeight > weightLimit) {
+      this.safeWrite(player.socket, `${item.name} is too heavy. You cannot carry any more weight.\r\n`);
+      return;
+    }
+
+    // Take the item
     room.removeItem(item);
+    
+    // Initialize inventory if it doesn't exist
     if (!player.inventory) {
       player.inventory = new Set();
     }
-    player.inventory.add(item);
     
-    player.socket.write(`You take ${item.name}.\r\n`);
+    player.inventory.add(item);
+
+    // Broadcast messages
+    this.safeWrite(player.socket, `You take ${item.name}.\r\n`);
     
     // Tell others in the room
     for (const otherPlayer of room.players) {
       if (otherPlayer !== player) {
-        otherPlayer.socket.write(`${player.name} takes ${item.name}.\r\n`);
+        this.safeWrite(otherPlayer.socket, `${player.name} takes ${item.name}.\r\n`);
       }
     }
+
+    // Save player state
+    this.gameState.savePlayer(player).catch(err => {
+      console.error('Error saving player after taking item:', err);
+    });
   }
 
   dropItem(player, itemName) {
-    if (!player.inventory || player.inventory.size === 0) {
-      player.socket.write('You are not carrying anything.\r\n');
-      return;
-    }
-
-    const item = Array.from(player.inventory).find(i => 
-      i.name.toLowerCase().includes(itemName.toLowerCase())
-    );
-
-    if (!item) {
-      player.socket.write(`You are not carrying ${itemName}.\r\n`);
-      return;
-    }
-
-    player.inventory.delete(item);
-    player.room.addItem(item);
+    const room = player.room;
     
-    player.socket.write(`You drop ${item.name}.\r\n`);
+    if (!room) {
+      this.safeWrite(player.socket, 'You are not in a valid location.\r\n');
+      return;
+    }
+
+    // Check if player has inventory
+    if (!player.inventory || player.inventory.size === 0) {
+      this.safeWrite(player.socket, 'You are not carrying anything.\r\n');
+      return;
+    }
+
+    // Find the item in inventory
+    const item = this.findItemInInventory(player, itemName.toLowerCase());
+    if (!item) {
+      this.safeWrite(player.socket, `You don't have '${itemName}' in your inventory.\r\n`);
+      return;
+    }
+
+    // Check if item can be dropped (some items might be cursed or bound)
+    if (item.metadata && item.metadata.nodrop) {
+      this.safeWrite(player.socket, `You cannot drop ${item.name}.\r\n`);
+      return;
+    }
+
+    // Drop the item
+    player.inventory.delete(item);
+    room.addItem(item);
+
+    // Broadcast messages
+    this.safeWrite(player.socket, `You drop ${item.name}.\r\n`);
     
     // Tell others in the room
-    for (const otherPlayer of player.room.players) {
+    for (const otherPlayer of room.players) {
       if (otherPlayer !== player) {
-        otherPlayer.socket.write(`${player.name} drops ${item.name}.\r\n`);
+        this.safeWrite(otherPlayer.socket, `${player.name} drops ${item.name}.\r\n`);
       }
+    }
+
+    // Save player state
+    this.gameState.savePlayer(player).catch(err => {
+      console.error('Error saving player after dropping item:', err);
+    });
+  }
+
+  findItemInRoom(room, target) {
+    if (!room.items || room.items.size === 0) {
+      return null;
+    }
+
+    // Try exact match first
+    let item = Array.from(room.items).find(i => 
+      i.name.toLowerCase() === target ||
+      i.id.toLowerCase() === target
+    );
+
+    if (item) {
+      return item;
+    }
+
+    // Try partial match
+    item = Array.from(room.items).find(i => 
+      i.name.toLowerCase().includes(target) ||
+      i.id.toLowerCase().includes(target)
+    );
+
+    return item;
+  }
+
+  findItemInInventory(player, target) {
+    if (!player.inventory || player.inventory.size === 0) {
+      return null;
+    }
+
+    // Try exact match first
+    let item = Array.from(player.inventory).find(i => 
+      i.name.toLowerCase() === target ||
+      i.id.toLowerCase() === target
+    );
+
+    if (item) {
+      return item;
+    }
+
+    // Try partial match
+    item = Array.from(player.inventory).find(i => 
+      i.name.toLowerCase().includes(target) ||
+      i.id.toLowerCase().includes(target)
+    );
+
+    return item;
+  }
+
+  calculateInventoryWeight(player) {
+    if (!player.inventory || player.inventory.size === 0) {
+      return 0;
+    }
+
+    let totalWeight = 0;
+    for (const item of player.inventory) {
+      if (item.metadata && item.metadata.weight) {
+        totalWeight += item.metadata.weight;
+      }
+    }
+
+    return totalWeight;
+  }
+
+  useItem(player, itemName) {
+    if (!player.inventory || player.inventory.size === 0) {
+      this.safeWrite(player.socket, 'You are not carrying anything to use.\r\n');
+      return;
+    }
+
+    // Find the item in inventory
+    const item = this.findItemInInventory(player, itemName.toLowerCase());
+    if (!item) {
+      this.safeWrite(player.socket, `You don't have '${itemName}' in your inventory.\r\n`);
+      return;
+    }
+
+    // Check if item is usable
+    if (!this.isItemUsable(item)) {
+      this.safeWrite(player.socket, `You cannot use ${item.name}.\r\n`);
+      return;
+    }
+
+    // Use the item based on its type
+    const result = this.applyItemEffect(player, item);
+    if (result.success) {
+      this.safeWrite(player.socket, result.message);
+      
+      // Tell others in the room
+      for (const otherPlayer of player.room.players) {
+        if (otherPlayer !== player) {
+          this.safeWrite(otherPlayer.socket, `${player.name} uses ${item.name}.\r\n`);
+        }
+      }
+
+      // Remove consumable items after use
+      if (this.isConsumable(item)) {
+        player.inventory.delete(item);
+        this.safeWrite(player.socket, `${item.name} is consumed.\r\n`);
+      }
+
+      // Save player state
+      this.gameState.savePlayer(player).catch(err => {
+        console.error('Error saving player after using item:', err);
+      });
+    } else {
+      this.safeWrite(player.socket, result.message);
     }
   }
 
+  equipItem(player, itemName) {
+    if (!player.inventory || player.inventory.size === 0) {
+      this.safeWrite(player.socket, 'You are not carrying anything to equip.\r\n');
+      return;
+    }
+
+    // Find the item in inventory
+    const item = this.findItemInInventory(player, itemName.toLowerCase());
+    if (!item) {
+      this.safeWrite(player.socket, `You don't have '${itemName}' in your inventory.\r\n`);
+      return;
+    }
+
+    // Check if item is equippable
+    if (!this.isItemEquippable(item)) {
+      this.safeWrite(player.socket, `You cannot equip ${item.name}.\r\n`);
+      return;
+    }
+
+    // Determine equipment slot
+    const slot = this.getEquipmentSlot(item);
+    if (!slot) {
+      this.safeWrite(player.socket, `${item.name} cannot be equipped.\r\n`);
+      return;
+    }
+
+    // Initialize equipment if needed
+    if (!player.equipment) {
+      player.equipment = {
+        weapon: null,
+        armor: null,
+        accessories: []
+      };
+    }
+
+    // Handle different equipment slots
+    if (slot === 'weapon') {
+      // Unequip current weapon if any
+      if (player.equipment.weapon) {
+        player.inventory.add(player.equipment.weapon);
+        this.safeWrite(player.socket, `You unequip ${player.equipment.weapon.name}.\r\n`);
+      }
+      
+      player.equipment.weapon = item;
+      player.inventory.delete(item);
+      this.safeWrite(player.socket, `You equip ${item.name} as your weapon.\r\n`);
+      
+    } else if (slot === 'armor' || slot === 'chest' || slot === 'shield') {
+      // Unequip current armor if any
+      if (player.equipment.armor) {
+        player.inventory.add(player.equipment.armor);
+        this.safeWrite(player.socket, `You unequip ${player.equipment.armor.name}.\r\n`);
+      }
+      
+      player.equipment.armor = item;
+      player.inventory.delete(item);
+      this.safeWrite(player.socket, `You equip ${item.name} as your armor.\r\n`);
+      
+    } else if (slot === 'accessory') {
+      // Add to accessories (allow multiple)
+      if (!player.equipment.accessories) {
+        player.equipment.accessories = [];
+      }
+      
+      player.equipment.accessories.push(item);
+      player.inventory.delete(item);
+      this.safeWrite(player.socket, `You equip ${item.name} as an accessory.\r\n`);
+    }
+
+    // Tell others in the room
+    for (const otherPlayer of player.room.players) {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${player.name} equips ${item.name}.\r\n`);
+      }
+    }
+
+    // Save player state
+    this.gameState.savePlayer(player).catch(err => {
+      console.error('Error saving player after equipping item:', err);
+    });
+  }
+
+  unequipItem(player, itemName) {
+    if (!player.equipment) {
+      this.safeWrite(player.socket, 'You have nothing equipped.\r\n');
+      return;
+    }
+
+    const itemNameLower = itemName.toLowerCase();
+    let foundItem = null;
+    let slot = null;
+
+    // Check weapon
+    if (player.equipment.weapon && 
+        (player.equipment.weapon.name.toLowerCase().includes(itemNameLower) ||
+         player.equipment.weapon.id.toLowerCase().includes(itemNameLower))) {
+      foundItem = player.equipment.weapon;
+      slot = 'weapon';
+    }
+    
+    // Check armor
+    if (!foundItem && player.equipment.armor && 
+        (player.equipment.armor.name.toLowerCase().includes(itemNameLower) ||
+         player.equipment.armor.id.toLowerCase().includes(itemNameLower))) {
+      foundItem = player.equipment.armor;
+      slot = 'armor';
+    }
+    
+    // Check accessories
+    if (!foundItem && player.equipment.accessories) {
+      const accessoryIndex = player.equipment.accessories.findIndex(acc => 
+        acc.name.toLowerCase().includes(itemNameLower) ||
+        acc.id.toLowerCase().includes(itemNameLower)
+      );
+      if (accessoryIndex !== -1) {
+        foundItem = player.equipment.accessories[accessoryIndex];
+        slot = 'accessory';
+      }
+    }
+
+    if (!foundItem) {
+      this.safeWrite(player.socket, `You don't have '${itemName}' equipped.\r\n`);
+      return;
+    }
+
+    // Check inventory space
+    const inventoryLimit = 20;
+    if (player.inventory && player.inventory.size >= inventoryLimit) {
+      this.safeWrite(player.socket, 'Your inventory is full. You cannot unequip items.\r\n');
+      return;
+    }
+
+    // Unequip the item
+    if (slot === 'weapon') {
+      player.equipment.weapon = null;
+    } else if (slot === 'armor') {
+      player.equipment.armor = null;
+    } else if (slot === 'accessory') {
+      const accessoryIndex = player.equipment.accessories.findIndex(acc => acc === foundItem);
+      player.equipment.accessories.splice(accessoryIndex, 1);
+    }
+
+    // Add to inventory
+    if (!player.inventory) {
+      player.inventory = new Set();
+    }
+    player.inventory.add(foundItem);
+
+    this.safeWrite(player.socket, `You unequip ${foundItem.name}.\r\n`);
+
+    // Tell others in the room
+    for (const otherPlayer of player.room.players) {
+      if (otherPlayer !== player) {
+        this.safeWrite(otherPlayer.socket, `${player.name} unequips ${foundItem.name}.\r\n`);
+      }
+    }
+
+    // Save player state
+    this.gameState.savePlayer(player).catch(err => {
+      console.error('Error saving player after unequipping item:', err);
+    });
+  }
+
+  isItemUsable(item) {
+    const usableTypes = ['POTION', 'FOOD', 'SCROLL'];
+    return usableTypes.includes(item.type);
+  }
+
+  isConsumable(item) {
+    const consumableTypes = ['POTION', 'FOOD'];
+    return consumableTypes.includes(item.type);
+  }
+
+  isItemEquippable(item) {
+    const equippableTypes = ['WEAPON', 'ARMOR'];
+    return equippableTypes.includes(item.type);
+  }
+
+  getEquipmentSlot(item) {
+    if (item.type === 'WEAPON') {
+      return 'weapon';
+    }
+    if (item.type === 'ARMOR') {
+      // Check metadata for specific slot
+      if (item.metadata && item.metadata.slot) {
+        return item.metadata.slot;
+      }
+      return 'armor';
+    }
+    return null;
+  }
+
+  applyItemEffect(player, item) {
+    switch (item.type) {
+      case 'POTION':
+        return this.applyPotionEffect(player, item);
+      case 'FOOD':
+        return this.applyFoodEffect(player, item);
+      case 'SCROLL':
+        return this.applyScrollEffect(player, item);
+      default:
+        return { success: false, message: `You cannot use ${item.name}.` };
+    }
+  }
+
+  applyPotionEffect(player, item) {
+    if (item.metadata && item.metadata.healing) {
+      const healAmount = item.metadata.healing;
+      const actualHeal = player.heal(healAmount);
+      
+      if (actualHeal > 0) {
+        return { 
+          success: true, 
+          message: `You drink ${item.name} and recover ${actualHeal} health.` 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: `You are already at full health.` 
+        };
+      }
+    }
+    
+    return { 
+      success: true, 
+      message: `You drink ${item.name}. You feel a strange sensation.` 
+    };
+  }
+
+  applyFoodEffect(player, item) {
+    if (item.metadata && item.metadata.nutrition) {
+      const nutritionAmount = item.metadata.nutrition;
+      // For now, just restore some stamina
+      const currentStamina = player.getAttribute('stamina');
+      const maxStamina = player.getMaxAttribute('stamina');
+      const newStamina = Math.min(currentStamina + nutritionAmount, maxStamina);
+      player.setAttributeBase('stamina', newStamina);
+      
+      const staminaGain = newStamina - currentStamina;
+      if (staminaGain > 0) {
+        return { 
+          success: true, 
+          message: `You eat ${item.name} and recover ${staminaGain} stamina.` 
+        };
+      } else {
+        return { 
+          success: false, 
+          message: `You are not hungry right now.` 
+        };
+      }
+    }
+    
+    return { 
+      success: true, 
+      message: `You eat ${item.name}. It tastes good.` 
+    };
+  }
+
+  applyScrollEffect(player, item) {
+    // For now, scrolls just provide a message
+    // In a full implementation, they would cast spells
+    return { 
+      success: true, 
+      message: `You read ${item.name}. The words glow briefly and then fade.` 
+    };
+  }
+
   sayToRoom(player, message) {
-    player.socket.write(`You say, "${message}"\r\n`);
+    this.safeWrite(player.socket, `You say, "${message}"\r\n`);
     
     // Tell others in the room
     for (const otherPlayer of player.room.players) {
       if (otherPlayer !== player) {
-        otherPlayer.socket.write(`${player.name} says, "${message}"\r\n`);
+        this.safeWrite(otherPlayer.socket, `${player.name} says, "${message}"\r\n`);
       }
     }
   }

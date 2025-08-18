@@ -109,8 +109,12 @@
   - Write unit tests for room inspection commands
   - _Requirements: 3.1, 3.2_
 
-- [ ] 7. Create inventory management system
-- [ ] 7.1 Implement item pickup and drop mechanics
+- [-] 7. Create inventory management system
+
+
+- [x] 7.1 Implement item pickup and drop mechanics
+
+
   - Create 'take' command to move items from room to player inventory
   - Implement 'drop' command to move items from inventory to room
   - Add inventory capacity limits and full inventory error handling
@@ -118,7 +122,13 @@
   - Write unit tests for take/drop operations and inventory limits
   - _Requirements: 4.1, 4.2_
 
-- [ ] 7.2 Build inventory display and management
+- [x] 7.2 Build inventory display and management
+
+
+
+
+
+
   - Implement 'inventory' command to list player's items
   - Add item quantity tracking and display
   - Create item usage commands for consumables

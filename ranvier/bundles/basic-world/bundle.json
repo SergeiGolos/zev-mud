@@ -8,6 +8,13 @@
   ],
   "commands": [
     "look",
-    "examine"
+    "examine",
+    "take",
+    "drop",
+    "inventory",
+    "equip",
+    "unequip",
+    "equipment",
+    "use"
   ]
 }

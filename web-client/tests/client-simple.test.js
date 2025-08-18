@@ -108,10 +108,15 @@ describe('MudClient Core Functionality', () => {
     const client = new MudClient();
     client.websocket = new MockWebSocket('ws://localhost:8080');
     
-    // Test printable character
+    // Test printable character - should accumulate locally, not send immediately
     client.handleTerminalInput('a');
     expect(client.currentInput).toBe('a');
-    expect(client.websocket.lastSentData).toBe('a');
+    expect(client.websocket.lastSentData).toBeUndefined(); // Character should not be sent yet
+    
+    // Test Enter key - should send the complete command
+    client.handleTerminalInput('\r');
+    expect(client.currentInput).toBe('');
+    expect(client.websocket.lastSentData).toBe('a\r\n'); // Complete command with proper line ending
   });
 
   test('should manage command history', () => {

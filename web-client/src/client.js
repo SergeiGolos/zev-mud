@@ -101,16 +101,22 @@ class MudClient {
     } else if (code === 127 || code === 8) { // Backspace/Delete
       if (this.currentInput.length > 0) {
         this.currentInput = this.currentInput.slice(0, -1);
+        // Handle local backspace - move cursor back, write space, move cursor back
+        if (this.terminal) {
+          this.terminal.write('\b \b');
+        }
       }
-      this.sendCommand(data);
     } else if (code === 27) { // Escape sequences (arrow keys)
       this.handleEscapeSequence(data);
     } else if (code >= 32 && code <= 126) { // Printable characters
       this.currentInput += data;
-      this.sendCommand(data);
+      // Display character locally for immediate feedback
+      if (this.terminal) {
+        this.terminal.write(data);
+      }
     } else {
-      // Pass through other control characters
-      this.sendCommand(data);
+      // Pass through other control characters only if they're not printable input
+      // Most control characters should not be sent to the server during input
     }
   }
 
@@ -130,17 +136,22 @@ class MudClient {
         this.replaceCurrentLine('');
       }
     } else {
-      // Pass through other escape sequences
-      this.sendCommand(data);
+      // For other escape sequences, we generally don't want to send them to the server
+      // during input editing. Most escape sequences are for local terminal control.
     }
   }
 
   replaceCurrentLine(newText) {
-    // Clear current input and replace with new text
+    // Clear current input and replace with new text locally
     const clearLength = this.currentInput.length;
-    this.sendCommand('\b'.repeat(clearLength) + ' '.repeat(clearLength) + '\b'.repeat(clearLength));
+    // Move cursor back, clear with spaces, move cursor back again, then write new text
+    if (this.terminal) {
+      this.terminal.write('\b'.repeat(clearLength) + ' '.repeat(clearLength) + '\b'.repeat(clearLength));
+    }
     this.currentInput = newText;
-    this.sendCommand(newText);
+    if (this.terminal) {
+      this.terminal.write(newText);
+    }
   }
 
   sendCommand(data) {

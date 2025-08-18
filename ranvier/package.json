@@ -9,12 +9,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "ranvier": "^3.0.0",
+    "js-yaml": "^4.1.0",
     "nedb": "^1.8.0",
-    "js-yaml": "^4.1.0"
+    "ranvier": "^3.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0",
-    "jest": "^29.0.0"
+    "jest": "^29.0.0",
+    "nodemon": "^3.0.0"
   }
 }

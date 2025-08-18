@@ -29,6 +29,34 @@ bower_components
 # Compiled binary addons
 build/Release
 
+# Documentation and temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE and editor files
+.vscode/
+.idea/
+*.sublime-*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Docker and deployment
+.env.local
+.env.production
+*.pem
+*.key
+backup/
+logs/
+
 # Dependency directories
 jspm_packages/
 

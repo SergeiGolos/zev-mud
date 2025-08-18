@@ -362,13 +362,12 @@ docker compose exec ranvier ls -la /app/data/
 
 ## Contributing
 
-We welcome contributions! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for detailed information about:
+We welcome contributions! Please see our documentation:
 
-- Development setup and workflow
-- Code style and standards
-- Testing requirements
-- Pull request process
-- Issue reporting
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development setup, workflow, and standards
+- **[API.md](API.md)** - Technical API reference for all components  
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Production deployment and operations guide
+- **[DOCS.md](DOCS.md)** - Complete documentation index and overview
 
 ## Architecture Decision Records
 

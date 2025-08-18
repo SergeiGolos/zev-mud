@@ -280,6 +280,24 @@ class TelnetServer {
     this.server = null;
   }
 
+  // Safe socket write utility to prevent EPIPE errors
+  safeWrite(socket, data) {
+    if (!socket || socket.destroyed || !socket.writable || socket.readyState !== 'open') {
+      return false;
+    }
+    
+    try {
+      return socket.write(data);
+    } catch (error) {
+      if (error.code === 'EPIPE' || error.code === 'ECONNRESET') {
+        console.log('Socket connection lost during write operation');
+      } else {
+        console.error('Socket write error:', error);
+      }
+      return false;
+    }
+  }
+
   start() {
     this.server = net.createServer((socket) => {
       console.log('New telnet connection');
@@ -298,26 +316,49 @@ class TelnetServer {
   }
 
   handleConnection(socket) {
-    // Send welcome message
-    socket.write('Welcome to zev-mud!\r\n');
-    socket.write('What is your character name? ');
+    // Set up error handling first to prevent uncaught exceptions
+    socket.on('error', (err) => {
+      if (err.code === 'EPIPE' || err.code === 'ECONNRESET') {
+        console.log('Socket connection lost');
+      } else {
+        console.error('Socket error:', err);
+      }
+    });
+
+    // Send welcome message using safe write
+    if (!this.safeWrite(socket, 'Welcome to zev-mud!\r\n')) {
+      console.log('Failed to send welcome message - socket closed');
+      return;
+    }
+    
+    if (!this.safeWrite(socket, 'What is your character name? ')) {
+      console.log('Failed to send name prompt - socket closed');
+      return;
+    }
     
     let awaitingName = true;
     let player = null;
 
     socket.on('data', (data) => {
-      const input = data.toString().trim();
-      
-      if (awaitingName) {
-        this.handleCharacterLogin(socket, input).then(p => {
-          player = p;
-          awaitingName = false;
-          if (player) {
-            this.enterGame(player, socket);
-          }
-        });
-      } else if (player) {
-        this.handleCommand(player, input);
+      try {
+        const input = data.toString().trim();
+        
+        if (awaitingName) {
+          this.handleCharacterLogin(socket, input).then(p => {
+            player = p;
+            awaitingName = false;
+            if (player) {
+              this.enterGame(player, socket);
+            }
+          }).catch(error => {
+            console.error('Error during character login:', error);
+            this.safeWrite(socket, 'An error occurred during login. Please try again.\r\n');
+          });
+        } else if (player) {
+          this.handleCommand(player, input);
+        }
+      } catch (error) {
+        console.error('Error processing socket data:', error);
       }
     });
 
@@ -334,18 +375,14 @@ class TelnetServer {
         });
       }
     });
-
-    socket.on('error', (err) => {
-      console.error('Socket error:', err);
-    });
   }
 
   async handleCharacterLogin(socket, name) {
     // Validate character name
     const validation = this.validateCharacterName(name);
     if (!validation.valid) {
-      socket.write(`${validation.error}\r\n`);
-      socket.write('What is your character name? ');
+      if (!this.safeWrite(socket, `${validation.error}\r\n`)) return null;
+      if (!this.safeWrite(socket, 'What is your character name? ')) return null;
       return null;
     }
 
@@ -356,8 +393,8 @@ class TelnetServer {
       // Character not found - check if name is available for new character
       const isUnique = await this.isCharacterNameUnique(name);
       if (!isUnique) {
-        socket.write(`The name "${name}" is already taken by an online player. Please choose another name.\r\n`);
-        socket.write('What is your character name? ');
+        if (!this.safeWrite(socket, `The name "${name}" is already taken by an online player. Please choose another name.\r\n`)) return null;
+        if (!this.safeWrite(socket, 'What is your character name? ')) return null;
         return null;
       }
 
@@ -369,13 +406,13 @@ class TelnetServer {
     } else {
       // Returning player - check if already online
       if (this.gameState.players.has(name)) {
-        socket.write(`Character "${name}" is already logged in. Please choose another character or try again later.\r\n`);
-        socket.write('What is your character name? ');
+        if (!this.safeWrite(socket, `Character "${name}" is already logged in. Please choose another character or try again later.\r\n`)) return null;
+        if (!this.safeWrite(socket, 'What is your character name? ')) return null;
         return null;
       }
 
       // Welcome back returning player
-      socket.write(`Welcome back, ${name}!\r\n`);
+      if (!this.safeWrite(socket, `Welcome back, ${name}!\r\n`)) return null;
       
       // Restore character to previous state and location
       player = await this.restoreCharacterState(player);
@@ -388,7 +425,7 @@ class TelnetServer {
     // Set up character in game world
     const success = await this.setupCharacterInWorld(player, socket);
     if (!success) {
-      socket.write('An error occurred while entering the game world. Please try again.\r\n');
+      this.safeWrite(socket, 'An error occurred while entering the game world. Please try again.\r\n');
       return null;
     }
 
@@ -581,8 +618,8 @@ class TelnetServer {
 
   async createNewCharacter(socket, name) {
     try {
-      socket.write(`\r\nCreating new character: ${name}\r\n`);
-      socket.write('Welcome to zev-mud! You are about to embark on an adventure.\r\n');
+      if (!this.safeWrite(socket, `\r\nCreating new character: ${name}\r\n`)) return null;
+      if (!this.safeWrite(socket, 'Welcome to zev-mud! You are about to embark on an adventure.\r\n')) return null;
       
       // Create character data structure with initial stats
       const characterData = {
@@ -627,14 +664,14 @@ class TelnetServer {
       // Save new character to database
       await this.gameState.savePlayer(player);
       
-      socket.write(`Character ${name} has been created successfully!\r\n`);
-      socket.write('Your adventure begins now...\r\n\r\n');
+      if (!this.safeWrite(socket, `Character ${name} has been created successfully!\r\n`)) return null;
+      if (!this.safeWrite(socket, 'Your adventure begins now...\r\n\r\n')) return null;
       
       return player;
     } catch (error) {
       console.error('Error creating new character:', error);
-      socket.write('An error occurred while creating your character. Please try again.\r\n');
-      socket.write('What is your character name? ');
+      this.safeWrite(socket, 'An error occurred while creating your character. Please try again.\r\n');
+      this.safeWrite(socket, 'What is your character name? ');
       return null;
     }
   }
@@ -642,52 +679,52 @@ class TelnetServer {
   enterGame(player, socket) {
     // Show room description
     this.showRoom(player);
-    socket.write('> ');
+    this.safeWrite(socket, '> ');
   }
 
   showRoom(player) {
     const room = player.room;
     if (!room) {
-      player.socket.write('You are not in a valid location.\r\n');
+      this.safeWrite(player.socket, 'You are not in a valid location.\r\n');
       return;
     }
 
-    player.socket.write(`\r\n${room.title}\r\n`);
-    player.socket.write(`${room.description}\r\n`);
+    if (!this.safeWrite(player.socket, `\r\n${room.title}\r\n`)) return;
+    if (!this.safeWrite(player.socket, `${room.description}\r\n`)) return;
     
     // Show exits with enhanced formatting
     if (room.exits && room.exits.length > 0) {
       const exitNames = room.exits.map(exit => exit.direction).join(', ');
-      player.socket.write(`\r\nExits: ${exitNames}\r\n`);
+      if (!this.safeWrite(player.socket, `\r\nExits: ${exitNames}\r\n`)) return;
     } else {
-      player.socket.write(`\r\nExits: none\r\n`);
+      if (!this.safeWrite(player.socket, `\r\nExits: none\r\n`)) return;
     }
     
     // Show items with enhanced listing
     if (room.items && room.items.size > 0) {
-      player.socket.write('\r\nItems here:\r\n');
+      if (!this.safeWrite(player.socket, '\r\nItems here:\r\n')) return;
       for (const item of room.items) {
-        player.socket.write(`  ${item.name}\r\n`);
+        if (!this.safeWrite(player.socket, `  ${item.name}\r\n`)) return;
       }
     }
     
     // Show NPCs with enhanced information
     if (room.npcs && room.npcs.size > 0) {
-      player.socket.write('\r\nCreatures here:\r\n');
+      if (!this.safeWrite(player.socket, '\r\nCreatures here:\r\n')) return;
       for (const npc of room.npcs) {
         const hostileIndicator = npc.hostile ? ' (hostile)' : ' (peaceful)';
         const levelInfo = npc.level ? ` [Level ${npc.level}]` : '';
-        player.socket.write(`  ${npc.name}${hostileIndicator}${levelInfo}\r\n`);
+        if (!this.safeWrite(player.socket, `  ${npc.name}${hostileIndicator}${levelInfo}\r\n`)) return;
       }
     }
     
     // Show other players with enhanced information
     if (room.players && room.players.size > 1) {
-      player.socket.write('\r\nOther adventurers here:\r\n');
+      if (!this.safeWrite(player.socket, '\r\nOther adventurers here:\r\n')) return;
       for (const otherPlayer of room.players) {
         if (otherPlayer !== player) {
           const levelInfo = otherPlayer.stats && otherPlayer.stats.level ? ` [Level ${otherPlayer.stats.level}]` : '';
-          player.socket.write(`  ${otherPlayer.name}${levelInfo}\r\n`);
+          if (!this.safeWrite(player.socket, `  ${otherPlayer.name}${levelInfo}\r\n`)) return;
         }
       }
     }
@@ -713,7 +750,7 @@ class TelnetServer {
         if (args.length > 1) {
           this.examineTarget(player, args.slice(1).join(' '));
         } else {
-          player.socket.write('Examine what?\r\n');
+          this.safeWrite(player.socket, 'Examine what?\r\n');
         }
         break;
         
@@ -758,7 +795,7 @@ class TelnetServer {
         if (args.length > 1) {
           this.takeItem(player, args.slice(1).join(' '));
         } else {
-          player.socket.write('Take what?\r\n');
+          this.safeWrite(player.socket, 'Take what?\r\n');
         }
         break;
         
@@ -766,7 +803,7 @@ class TelnetServer {
         if (args.length > 1) {
           this.dropItem(player, args.slice(1).join(' '));
         } else {
-          player.socket.write('Drop what?\r\n');
+          this.safeWrite(player.socket, 'Drop what?\r\n');
         }
         break;
         
@@ -774,40 +811,40 @@ class TelnetServer {
         if (args.length > 1) {
           this.sayToRoom(player, args.slice(1).join(' '));
         } else {
-          player.socket.write('Say what?\r\n');
+          this.safeWrite(player.socket, 'Say what?\r\n');
         }
         break;
         
       case 'quit':
-        player.socket.write('Goodbye!\r\n');
+        this.safeWrite(player.socket, 'Goodbye!\r\n');
         player.socket.end();
         return;
         
       default:
-        player.socket.write(`Unknown command: ${command}\r\n`);
+        this.safeWrite(player.socket, `Unknown command: ${command}\r\n`);
     }
     
-    player.socket.write('> ');
+    this.safeWrite(player.socket, '> ');
   }
 
   movePlayer(player, direction) {
     const room = player.room;
     if (!room) {
-      player.socket.write('You are not in a valid location.\r\n');
+      this.safeWrite(player.socket, 'You are not in a valid location.\r\n');
       return;
     }
 
     // Validate exit exists
     const exit = room.exits.find(e => e.direction === direction);
     if (!exit) {
-      player.socket.write(`You cannot go ${direction}.\r\n`);
+      this.safeWrite(player.socket, `You cannot go ${direction}.\r\n`);
       return;
     }
 
     // Validate destination room exists
     const newRoom = this.gameState.getRoom(exit.roomId);
     if (!newRoom) {
-      player.socket.write(`The path ${direction} is blocked.\r\n`);
+      this.safeWrite(player.socket, `The path ${direction} is blocked.\r\n`);
       console.error(`Invalid room reference: ${exit.roomId} from room ${room.id}`);
       return;
     }
@@ -815,7 +852,7 @@ class TelnetServer {
     // Announce departure to current room
     for (const otherPlayer of room.players) {
       if (otherPlayer !== player) {
-        otherPlayer.socket.write(`${player.name} leaves ${direction}.\r\n`);
+        this.safeWrite(otherPlayer.socket, `${player.name} leaves ${direction}.\r\n`);
       }
     }
 
@@ -832,9 +869,9 @@ class TelnetServer {
       if (otherPlayer !== player) {
         const oppositeDirection = this.getOppositeDirection(direction);
         if (oppositeDirection) {
-          otherPlayer.socket.write(`${player.name} arrives from the ${oppositeDirection}.\r\n`);
+          this.safeWrite(otherPlayer.socket, `${player.name} arrives from the ${oppositeDirection}.\r\n`);
         } else {
-          otherPlayer.socket.write(`${player.name} arrives.\r\n`);
+          this.safeWrite(otherPlayer.socket, `${player.name} arrives.\r\n`);
         }
       }
     }

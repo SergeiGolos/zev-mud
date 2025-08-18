@@ -1,0 +1,53 @@
+{
+  "name": "zev-mud-integration-tests",
+  "version": "1.0.0",
+  "description": "Integration test suite for zev-mud",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --runInBand --verbose",
+    "test:integration": "jest --testPathPattern=integration --runInBand",
+    "test:e2e": "jest --testPathPattern=e2e --runInBand",
+    "test:performance": "jest --testPathPattern=performance --runInBand",
+    "test:protocol": "jest --testPathPattern=protocol --runInBand",
+    "test:database": "jest --testPathPattern=database --runInBand",
+    "test:browser": "playwright test",
+    "test:coverage": "jest --coverage --runInBand",
+    "test:watch": "jest --watch --runInBand",
+    "setup": "node scripts/setup-test-environment.js",
+    "teardown": "node scripts/teardown-test-environment.js"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.54.2",
+    "axios": "^1.6.0",
+    "ws": "^8.14.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^29.0.0",
+    "jest-environment-node": "^29.0.0",
+    "supertest": "^6.3.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "../proxy/src/**/*.js",
+      "../ranvier/src/**/*.js",
+      "../web-client/src/**/*.js",
+      "!**/node_modules/**",
+      "!**/coverage/**"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": [
+      "text",
+      "lcov",
+      "html"
+    ],
+    "testTimeout": 30000,
+    "setupFilesAfterEnv": [
+      "<rootDir>/setup/jest.setup.js"
+    ],
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
+  }
+}

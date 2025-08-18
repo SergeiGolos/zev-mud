@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  ranvier-test:
+    build: 
+      context: ./ranvier
+      dockerfile: Dockerfile
+    ports:
+      - "3002:3000"
+    volumes:
+      - ./ranvier:/app
+      - /app/node_modules
+      - ranvier_test_data:/app/data
+    environment:
+      - NODE_ENV=test
+      - PORT=3000
+      - DB_PATH=/app/data/test
+    networks:
+      - mud-test-network
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  proxy-test:
+    build:
+      context: ./proxy
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    volumes:
+      - ./proxy:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+      - WS_PORT=8080
+      - TELNET_HOST=ranvier-test
+      - TELNET_PORT=3000
+    depends_on:
+      ranvier-test:
+        condition: service_healthy
+    networks:
+      - mud-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  web-client-test:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+    ports:
+      - "3003:3001"
+    volumes:
+      - ./web-client:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+      - PORT=3001
+      - PROXY_URL=ws://proxy-test:8080
+    depends_on:
+      proxy-test:
+        condition: service_healthy
+    networks:
+      - mud-test-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  integration-tests:
+    build:
+      context: ./tests
+      dockerfile: Dockerfile
+    volumes:
+      - ./tests:/app/tests
+      - ./proxy:/app/proxy
+      - ./ranvier:/app/ranvier
+      - ./web-client:/app/web-client
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+      - RANVIER_HOST=ranvier-test
+      - RANVIER_PORT=3000
+      - PROXY_HOST=proxy-test
+      - PROXY_PORT=8080
+      - WEB_CLIENT_HOST=web-client-test
+      - WEB_CLIENT_PORT=3001
+    depends_on:
+      ranvier-test:
+        condition: service_healthy
+      proxy-test:
+        condition: service_healthy
+      web-client-test:
+        condition: service_healthy
+    networks:
+      - mud-test-network
+    command: ["npm", "test"]
+
+networks:
+  mud-test-network:
+    driver: bridge
+
+volumes:
+  ranvier_test_data:
+    driver: local

@@ -284,12 +284,8 @@ class TelnetServer {
     this.server = net.createServer((socket) => {
       console.log('New telnet connection');
       
-      // Create a transport stream for this connection
-      const stream = new Ranvier.TransportStream.TelnetStream();
-      stream.attach(socket);
-      
-      // Handle new player connection
-      this.handleConnection(stream);
+      // Handle new player connection directly with the socket
+      this.handleConnection(socket);
     });
 
     this.server.listen(this.port, () => {

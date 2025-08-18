@@ -96,7 +96,12 @@
   - Write unit tests for movement validation and location tracking
   - _Requirements: 3.1, 3.3_
 
-- [ ] 6.2 Add look and examine functionality
+- [x] 6.2 Add look and examine functionality
+
+
+
+
+
   - Implement 'look' command to display current room details
   - Add 'examine' command for detailed item and NPC descriptions
   - Create room content listing (items, NPCs, other players)

@@ -659,15 +659,15 @@ class TelnetServer {
     player.socket.write(`\r\n${room.title}\r\n`);
     player.socket.write(`${room.description}\r\n`);
     
-    // Show exits
+    // Show exits with enhanced formatting
     if (room.exits && room.exits.length > 0) {
       const exitNames = room.exits.map(exit => exit.direction).join(', ');
       player.socket.write(`\r\nExits: ${exitNames}\r\n`);
     } else {
-      player.socket.write(`\r\nThere are no obvious exits.\r\n`);
+      player.socket.write(`\r\nExits: none\r\n`);
     }
     
-    // Show items
+    // Show items with enhanced listing
     if (room.items && room.items.size > 0) {
       player.socket.write('\r\nItems here:\r\n');
       for (const item of room.items) {
@@ -675,21 +675,23 @@ class TelnetServer {
       }
     }
     
-    // Show NPCs
+    // Show NPCs with enhanced information
     if (room.npcs && room.npcs.size > 0) {
-      player.socket.write('\r\n');
+      player.socket.write('\r\nCreatures here:\r\n');
       for (const npc of room.npcs) {
-        const hostileIndicator = npc.hostile ? ' (looks hostile)' : '';
-        player.socket.write(`${npc.name} is here${hostileIndicator}.\r\n`);
+        const hostileIndicator = npc.hostile ? ' (hostile)' : ' (peaceful)';
+        const levelInfo = npc.level ? ` [Level ${npc.level}]` : '';
+        player.socket.write(`  ${npc.name}${hostileIndicator}${levelInfo}\r\n`);
       }
     }
     
-    // Show other players
+    // Show other players with enhanced information
     if (room.players && room.players.size > 1) {
-      player.socket.write('\r\n');
+      player.socket.write('\r\nOther adventurers here:\r\n');
       for (const otherPlayer of room.players) {
         if (otherPlayer !== player) {
-          player.socket.write(`${otherPlayer.name} is here.\r\n`);
+          const levelInfo = otherPlayer.stats && otherPlayer.stats.level ? ` [Level ${otherPlayer.stats.level}]` : '';
+          player.socket.write(`  ${otherPlayer.name}${levelInfo}\r\n`);
         }
       }
     }
@@ -868,7 +870,10 @@ class TelnetServer {
 
   lookAtTarget(player, target) {
     const room = player.room;
-    if (!room) return;
+    if (!room) {
+      player.socket.write('You are not in a valid location.\r\n');
+      return;
+    }
 
     const targetLower = target.toLowerCase();
 
@@ -925,12 +930,15 @@ class TelnetServer {
       }
     }
 
-    player.socket.write(`You don't see ${target} here.\r\n`);
+    player.socket.write(`You don't see '${target}' here.\r\n`);
   }
 
   examineTarget(player, target) {
     const room = player.room;
-    if (!room) return;
+    if (!room) {
+      player.socket.write('You are not in a valid location.\r\n');
+      return;
+    }
 
     const targetLower = target.toLowerCase();
 
@@ -987,7 +995,7 @@ class TelnetServer {
       return;
     }
 
-    player.socket.write(`You don't see ${target} here to examine.\r\n`);
+    player.socket.write(`You don't see '${target}' here to examine.\r\n`);
   }
 
   showDetailedItemInfo(player, item) {

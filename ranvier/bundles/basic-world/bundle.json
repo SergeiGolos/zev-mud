@@ -5,5 +5,9 @@
   "version": "1.0.0",
   "areas": [
     "basic-area"
+  ],
+  "commands": [
+    "look",
+    "examine"
   ]
 }

@@ -130,7 +130,15 @@ class WebSocketTelnetProxy extends EventEmitter {
       this.emit('websocketDisconnected', connection);
       
       if (connection.telnet && !connection.telnet.destroyed) {
-        connection.telnet.destroy();
+        // Use end() instead of destroy() for graceful close
+        connection.telnet.end();
+        
+        // Set a timeout to force close if it doesn't close gracefully
+        setTimeout(() => {
+          if (!connection.telnet.destroyed) {
+            connection.telnet.destroy();
+          }
+        }, 1000); // 1 second timeout
       }
       this.cleanupConnection(connection.id);
     });
@@ -141,7 +149,14 @@ class WebSocketTelnetProxy extends EventEmitter {
       this.emit('websocketError', connection, error);
       
       if (connection.telnet && !connection.telnet.destroyed) {
-        connection.telnet.destroy();
+        // Use end() for graceful close on error too
+        connection.telnet.end();
+        
+        setTimeout(() => {
+          if (!connection.telnet.destroyed) {
+            connection.telnet.destroy();
+          }
+        }, 500); // Shorter timeout for errors
       }
       this.cleanupConnection(connection.id);
     });
